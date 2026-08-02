@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import gc
 import os
 from pathlib import Path
 
@@ -20,9 +21,15 @@ import yaml
 
 
 def load_checkpoint(model: torch.nn.Module, model_pth: str) -> dict:
-    checkpoint = torch.load(model_pth, map_location='cpu')
+    # mmap reduces peak RAM when reading large .pth files on Windows
+    try:
+        checkpoint = torch.load(model_pth, map_location='cpu', weights_only=False, mmap=True)
+    except TypeError:
+        checkpoint = torch.load(model_pth, map_location='cpu', weights_only=False)
     checkpoint = checkpoint['model'] if 'model' in checkpoint else checkpoint
     model.load_state_dict(checkpoint, strict=True)
+    del checkpoint
+    gc.collect()
     info_path = str(Path(model_pth).with_suffix('.yaml'))
     configs = {}
     if os.path.exists(info_path):

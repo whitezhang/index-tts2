@@ -1,6 +1,7 @@
 import os
 from subprocess import CalledProcessError
 
+import gc
 import json
 import re
 import time
@@ -97,6 +98,9 @@ class IndexTTS2:
         else:
             self.gpt.eval()
         print(">> GPT weights restored from:", self.gpt_path)
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
 
         if use_deepspeed:
             try:
